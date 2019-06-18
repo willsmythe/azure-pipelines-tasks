@@ -14,8 +14,8 @@
     "preview": true,
     "version": {
         "Major": 0,
-        "Minor": 151,
-        "Patch": 2
+        "Minor": 153,
+        "Patch": 0
     },
     "demands": [],
     "minimumAgentVersion": "2.0.0",
@@ -74,6 +74,14 @@
                 "auto": "Git tag",
                 "manual": "User specified tag"
             }
+        },
+        {
+            "name": "tagPattern",
+            "type": "string",
+            "label": "Tag Pattern",
+            "required": false,
+            "visibleRule": "tagSource = auto",
+            "helpMarkDown": "Specify the regex for tag to be used for release creation."
         },
         {
             "name": "tag",
@@ -218,6 +226,8 @@
         "MissingAssetError": "File not found: %s",
         "MultipleReleasesFoundError": "Only 1 release was expected but more than 1 release was found for tag: %s. Unable to perform the action.",
         "MultipleTagFound": "Only 1 tag was expected but more than 1 tag was found for the given commit: %s. Unable to perform the action.",
+        "MultipleMatchingTagsFound": "Multiple Matching tags found for given regex: \"%s\". Unable to perform the action.",
+        "NoMatchingTagsFound": "No Matching tags found for given regex: \"%s\". Unable to perform the action.",
         "NoTagFound": "Release will not be created as no tags could be found for the target commit. For more details check out the ‘Tag Source’ section in documentation: https://aka.ms/AA4f03a.",
         "DeleteAllExistingAssets": "Deleting all existing assets...",
         "DuplicateAssetFound": "Duplicate asset found: %s",

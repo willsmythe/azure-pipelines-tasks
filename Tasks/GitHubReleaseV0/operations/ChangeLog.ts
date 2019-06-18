@@ -139,7 +139,7 @@ export class ChangeLog {
      * @param tag 
      */
     private async _getCommitForTag(githubEndpointToken: string, repositoryName: string, tag: string): Promise<string> {
-        let filteredTag: any = await new Helper().filterTag(githubEndpointToken, repositoryName, tag, this._filterTagsByTagName);
+        let filteredTag: any = await new Helper().filterTag(githubEndpointToken, repositoryName, tag, this._filterTagsByTagName, null);
 
         return filteredTag && filteredTag[GitHubAttributes.commit][GitHubAttributes.sha];
     }

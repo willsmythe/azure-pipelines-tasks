@@ -24,6 +24,7 @@ export class Helper {
     
     /**
      * Returns tag name to be used for creating a release.
+     * If tagPattern is specified, checks for tag matching the given tagPattern
      * If user has specified tag, then use it 
      * else if $(Build.SourceBranch) is referencing to a tag, then parse tag name and use it
      * else fetch tag from the target specified by user
@@ -33,9 +34,10 @@ export class Helper {
      * @param githubEndpointToken 
      * @param repositoryName 
      * @param target 
-     * @param tag 
+     * @param tag
+     * @param tagPattern 
      */
-    public async getTagForCommitTarget(githubEndpointToken: string, repositoryName: string, target: string): Promise<string> {
+    public async getTagForCommitTarget(githubEndpointToken: string, repositoryName: string, target: string, tagPattern: string): Promise<string> {
         console.log(tl.loc("FetchTagForTarget", target));
         let tag = undefined; 
         
@@ -45,7 +47,7 @@ export class Helper {
 
         // If the buildSourceVersion and user specified target does not match, then prefer user specified target
         if (commit_sha !== buildSourceVersion) {
-            tag = await this._getTagForCommit(githubEndpointToken, repositoryName, commit_sha);
+            tag = await this._getTagForCommit(githubEndpointToken, repositoryName, commit_sha, tagPattern);
         }
         else {
             let buildSourceBranch = tl.getVariable(AzureDevOpsVariables.buildSourceBranch);
@@ -55,9 +57,13 @@ export class Helper {
             // Else fetch tag from commit
             if (!!normalizedBranch) {
                 tag = normalizedBranch;
+                //Check whether the tag matches the pattern provided.
+                if (!!tagPattern && !Utility.isTagMatches(tag, tagPattern)) {
+                    tag = null;
+                }
             }
             else {
-                tag = await this._getTagForCommit(githubEndpointToken, repositoryName, commit_sha);
+                tag = await this._getTagForCommit(githubEndpointToken, repositoryName, commit_sha, tagPattern);
             }
         }
 
@@ -154,7 +160,7 @@ export class Helper {
     }   
 
     /**
-     * Returns tag object associated with the commit.
+     * Returns tag object associated with the commit matching the given Tag Pattern.
      * If 0 tag found return undefined
      * else if 1 tag found return tag object
      * else throw error
@@ -162,8 +168,9 @@ export class Helper {
      * @param repositoryName 
      * @param filterValue 
      * @param filterTagsCallback Callback to filter the tags
+     * @param tagPattern 
      */
-    public async filterTag(githubEndpointToken: string, repositoryName: string, filterValue: string, filterTagsCallback: (tagsList: any[], filterValue: string) => any[]): Promise<any> {
+    public async filterTag(githubEndpointToken: string, repositoryName: string, filterValue: string, filterTagsCallback: (tagsList: any[], filterValue: string, tagPattern: string) => any[], tagPattern: string): Promise<any> {
         let release = new Release();
 
         // Fetching the tags in the repository
@@ -181,7 +188,7 @@ export class Helper {
                 links = Utility.parseHTTPHeaderLink(tagsResponse.headers[GitHubAttributes.link]);
                 
                 // Filter the tags returned in current page
-                let tags: any[] = filterTagsCallback(tagsResponse.body, filterValue);
+                let tags: any[] = filterTagsCallback(tagsResponse.body, filterValue, tagPattern);
 
                 if (!!tags && tags.length > 0) {
                     // Push returned tags in filtered tags.
@@ -191,7 +198,12 @@ export class Helper {
 
                     // Throw error in case of ambiguity as we do not know which tag to pick for creating release.
                     if (filteredTags.length >= 2 ) {
-                        throw new Error(tl.loc("MultipleTagFound", filterValue));
+                        if (!!tagPattern) {
+                            throw new Error(tl.loc("MultipleMatchingTagsFound", tagPattern));
+                        }
+                        else {
+                            throw new Error(tl.loc("MultipleTagFound", filterValue));
+                        }
                     }
                 }
 
@@ -237,29 +249,34 @@ export class Helper {
     }
     
     /**
-     * Returns tag name associated with the commit.
+     * Returns tag name associated with the commit matching the given tag pattern.
      * If 0 tag found return undefined
      * else if 1 tag found return tag name
      * else throw error
      * @param githubEndpointToken 
      * @param repositoryName 
      * @param commit_sha 
+     * @param tagPattern 
      */
-    private async _getTagForCommit(githubEndpointToken: string, repositoryName: string, commit_sha: string): Promise<string> {
-        let filteredTag: any = await this.filterTag(githubEndpointToken, repositoryName, commit_sha, this._filterTagsByCommitSha);
+    private async _getTagForCommit(githubEndpointToken: string, repositoryName: string, commit_sha: string, tagPattern: string): Promise<string> {
+        let filteredTag: any = await this.filterTag(githubEndpointToken, repositoryName, commit_sha, this._filterTagsByCommitSha, tagPattern);
 
         return filteredTag && filteredTag[GitHubAttributes.nameAttribute];
     }
 
     /**
-     * Returns an array of matched tags, filtering on basis of commit sha
+     * Returns an array of matched tags, filtering on basis of commit sha and tagPattern
      */
-    private _filterTagsByCommitSha = (tagsList: any[], commit_sha: string): any[] => {
+    private _filterTagsByCommitSha = (tagsList: any[], commit_sha: string, tagPattern: string): any[] => {
         let filteredTags: any[] = [];
 
         for (let tag of (tagsList || [])) {
             if (tag[GitHubAttributes.commit][GitHubAttributes.sha] === commit_sha) {
-                filteredTags.push(tag);
+
+                //If no tagPattern is specified return the tag Else check for regex match and proceed.
+                if (!tagPattern || Utility.isTagMatches(tag[GitHubAttributes.nameAttribute], tagPattern)) {
+                    filteredTags.push(tag);
+                }
             }
         }
 

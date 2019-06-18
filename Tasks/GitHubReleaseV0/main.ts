@@ -32,6 +32,9 @@ class Main {
             let tag = tl.getInput(Inputs.tag);
             Utility.validateTag(tag, tagSource, action);
 
+            let tagPattern = tl.getInput(Inputs.tagPattern);
+
+            console.log(repositoryName + "......" + tagPattern);
             if (action === ActionType.delete) {
                 helper.publishTelemetry();
                 await actions.deleteReleaseAction(githubEndpointToken, repositoryName, tag);
@@ -48,7 +51,7 @@ class Main {
                 if (action === ActionType.create) {
                     // Get tag to create release if tag source is gitTag/auto
                     if (Utility.isTagSourceAuto(tagSource)) {
-                        tag = await helper.getTagForCommitTarget(githubEndpointToken, repositoryName, target);
+                        tag = await helper.getTagForCommitTarget(githubEndpointToken, repositoryName, target, tagPattern);
                     }
 
                     if (!!tag) {
@@ -60,8 +63,13 @@ class Main {
                         // If no tag found, then give warning.
                         // Doing this because commits without associated tag will fail continuosly if we throw error.
                         // Other option is to have some task condition, which user can specify in task.
-                        tl.warning(tl.loc("NoTagFound"));
+                        if(!!tagPattern){
+                            tl.warning(tl.loc("NoMatchingTagsFound", tagPattern));
+                        }
+                        else{
+                            tl.warning(tl.loc("NoTagFound"));
                         tl.debug("No tag found"); // for purpose of L0 test only.
+                        }
                     }
                 }
                 else if (action === ActionType.edit) {
