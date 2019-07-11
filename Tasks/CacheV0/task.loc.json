@@ -1,6 +1,6 @@
 {
   "id": "D53CCAB4-555E-4494-9D06-11DB043FB4A9",
-  "name": "CacheBeta",
+  "name": "Cache",
   "friendlyName": "ms-resource:loc.friendlyName",
   "description": "ms-resource:loc.description",
   "helpUrl": "https://aka.ms/pipeline-caching-docs",
